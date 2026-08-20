@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { View, Text, StyleSheet, FlatList, Pressable, Alert, TextInput } from 'react-native';
 import { dummyDeliveries } from '../data/deliveries';
 
-export default function DeliveriesScreen() {
+export default function DeliveriesScreen({ navigation }) {
   const [searchText, setSearchText] = useState('');
 
   const filteredDeliveries = dummyDeliveries.filter((delivery) => {
@@ -42,7 +42,7 @@ export default function DeliveriesScreen() {
 
       <Pressable 
         style={styles.button}
-        onPress={() => Alert.alert(`Order #${item.orderId} selected`)}
+        onPress={() => navigation.navigate('DeliveryDetails', { delivery: item })}
       >
         <Text style={styles.buttonText}>VIEW DELIVERY</Text>
       </Pressable>
