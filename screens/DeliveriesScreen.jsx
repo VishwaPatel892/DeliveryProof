@@ -1,8 +1,19 @@
-import React from 'react';
-import { View, Text, StyleSheet, FlatList, Pressable, Alert } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, FlatList, Pressable, Alert, TextInput } from 'react-native';
 import { dummyDeliveries } from '../data/deliveries';
 
 export default function DeliveriesScreen() {
+  const [searchText, setSearchText] = useState('');
+
+  const filteredDeliveries = dummyDeliveries.filter((delivery) => {
+    const searchLower = searchText.toLowerCase();
+    return (
+      delivery.orderId.toLowerCase().includes(searchLower) ||
+      delivery.customerName.toLowerCase().includes(searchLower) ||
+      delivery.area.toLowerCase().includes(searchLower)
+    );
+  });
+
   const renderItem = ({ item }) => (
     <View style={styles.card}>
       <Text style={styles.orderId}>📦 Order #{item.orderId}</Text>
@@ -38,13 +49,26 @@ export default function DeliveriesScreen() {
     </View>
   );
 
+  const renderEmptyComponent = () => (
+    <View style={styles.emptyContainer}>
+      <Text style={styles.emptyText}>No deliveries found</Text>
+    </View>
+  );
+
   return (
     <View style={styles.container}>
+      <TextInput
+        style={styles.searchInput}
+        placeholder="Search by order, customer or area..."
+        value={searchText}
+        onChangeText={setSearchText}
+      />
       <FlatList
-        data={dummyDeliveries}
+        data={filteredDeliveries}
         renderItem={renderItem}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.listContainer}
+        ListEmptyComponent={renderEmptyComponent}
       />
     </View>
   );
@@ -54,6 +78,16 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+  },
+  searchInput: {
+    backgroundColor: '#ffffff',
+    padding: 12,
+    margin: 16,
+    marginBottom: 0,
+    borderRadius: 8,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#ddd',
   },
   listContainer: {
     padding: 16,
@@ -102,5 +136,14 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontWeight: 'bold',
     fontSize: 14,
-  }
+  },
+  emptyContainer: {
+    padding: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emptyText: {
+    fontSize: 16,
+    color: '#666',
+  },
 });
