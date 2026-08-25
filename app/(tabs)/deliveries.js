@@ -1,88 +1,119 @@
-// app/(tabs)/deliveries.js
+// app/(tabs)/deliveries.js — Green Palette
 //
-// DELIVERIES SCREEN — Route path: "/deliveries"
-//
-// HOW THIS FILE BECOMES A ROUTE:
-// - The filename `deliveries.js` inside app/(tabs)/ becomes the route "/deliveries".
-// - When the user taps the "Deliveries" tab, Expo Router navigates to this file.
-// - No manual registration needed.
-//
-// NOTE: The delivery list (FlatList), search bar, and dummy data
-//       will be implemented in a later part.
-//       For now, this is a clean placeholder screen.
+// COLOR ROLES:
+//   #EAE7D6  → Screen background
+//   #5D7B6F  → Header (deep teal)
+//   #B0D4B8  → Header subtitle text (light green)
 
 import React from 'react';
-import { View, Text, SafeAreaView, StyleSheet } from 'react-native';
+import { View, Text, FlatList, Alert, SafeAreaView, StyleSheet } from 'react-native';
+import deliveries from '../../data/deliveries';
+import DeliveryCard from '../../components/DeliveryCard';
 
+// ── Empty State ──────────────────────────────────────────────────────────────
+function EmptyState() {
+  return (
+    <View style={styles.emptyContainer}>
+      <Text style={styles.emptyIcon}>📭</Text>
+      <Text style={styles.emptyTitle}>No deliveries found</Text>
+      <Text style={styles.emptySubtitle}>
+        Your assigned deliveries will appear here.
+      </Text>
+    </View>
+  );
+}
+
+// ── Deliveries Screen ────────────────────────────────────────────────────────
 export default function DeliveriesScreen() {
+
+  const renderItem = ({ item }) => (
+    <DeliveryCard
+      delivery={item}
+      onPress={() => {
+        Alert.alert(
+          'Delivery Selected',
+          `Order ${item.orderId} selected.\nDelivery Details screen coming in Part 3.`,
+          [{ text: 'OK' }]
+        );
+      }}
+    />
+  );
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      <View style={styles.container}>
 
-        {/* ── Screen Title ── */}
-        <Text style={styles.title}>Deliveries</Text>
-
-        {/* ── Placeholder Card ── */}
-        <View style={styles.card}>
-          {/* Icon placeholder */}
-          <Text style={styles.icon}>📦</Text>
-
-          <Text style={styles.cardText}>
-            Your assigned deliveries will appear here.
-          </Text>
-        </View>
-
+      {/* ── Header ── */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>My Deliveries</Text>
+        <Text style={styles.headerSubtitle}>{deliveries.length} deliveries assigned</Text>
       </View>
+
+      {/* ── FlatList ── */}
+      <FlatList
+        data={deliveries}
+        renderItem={renderItem}
+        keyExtractor={(item) => item.id}
+        ListEmptyComponent={EmptyState}
+        contentContainerStyle={styles.listContent}
+        showsVerticalScrollIndicator={false}
+      />
+
     </SafeAreaView>
   );
 }
 
+// ── Styles ───────────────────────────────────────────────────────────────────
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f0f4ff',
+    backgroundColor: '#EAE7D6',         // Warm off-white
   },
-
-  container: {
-    flex: 1,
-    padding: 24,
-    justifyContent: 'center',
-    alignItems: 'center',
+  header: {
+    backgroundColor: '#5D7B6F',         // Deep teal-green
+    paddingHorizontal: 20,
+    paddingVertical: 18,
+    borderBottomLeftRadius: 20,
+    borderBottomRightRadius: 20,
   },
-
-  // Page title
-  title: {
-    fontSize: 28,
+  headerTitle: {
+    fontSize: 22,
     fontWeight: 'bold',
-    color: '#111827',
-    marginBottom: 32,
+    color: '#EAE7D6',                   // Off-white
+  },
+  headerSubtitle: {
+    fontSize: 13,
+    color: '#B0D4B8',                   // Light green
+    marginTop: 2,
+  },
+  listContent: {
+    paddingTop: 12,
+    paddingBottom: 24,
   },
 
-  // White rounded placeholder card
-  card: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
-    padding: 36,
-    width: '100%',
+  // ── Empty State ──
+  emptyContainer: {
+    flex: 1,
     alignItems: 'center',
-    elevation: 4,
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowOffset: { width: 0, height: 4 },
-    shadowRadius: 12,
+    justifyContent: 'center',
+    paddingTop: 80,
+    paddingHorizontal: 32,
   },
-
-  // Large emoji icon in the card
-  icon: {
-    fontSize: 48,
+  emptyIcon: {
+    fontSize: 64,
     marginBottom: 16,
   },
-
-  // Placeholder message text
-  cardText: {
-    fontSize: 16,
-    color: '#6b7280',
+  emptyTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#5D7B6F',
+    marginBottom: 8,
     textAlign: 'center',
-    lineHeight: 24,
+  },
+  emptySubtitle: {
+    fontSize: 15,
+    color: '#5D7B6F',
+    textAlign: 'center',
+    lineHeight: 22,
+    opacity: 0.7,
   },
 });
