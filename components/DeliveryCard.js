@@ -52,7 +52,7 @@ function DeliveryCard({ delivery, onPress }) {
           styles.button,
           pressed && styles.buttonPressed,
         ]}
-        onPress={onPress}
+        onPress={() => onPress(delivery)}
       >
         <Text style={styles.buttonText}>VIEW DELIVERY</Text>
       </Pressable>

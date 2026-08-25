@@ -12,6 +12,7 @@
 
 import React, { useState } from 'react';
 import { View, Text, TextInput, Pressable, FlatList, Alert, SafeAreaView, StyleSheet } from 'react-native';
+import { router } from 'expo-router';
 import deliveries from '../../data/deliveries';
 import DeliveryCard from '../../components/DeliveryCard';
 
@@ -164,8 +165,8 @@ export default function DeliveriesScreen() {
         renderItem={({ item }) => (
           <DeliveryCard
             delivery={item}
-            onPress={() => {
-              Alert.alert('Delivery', `${item.orderId} selected`);
+            onPress={(selectedItem) => {
+              router.push(`/delivery/${selectedItem.id}`);
             }}
           />
         )}
@@ -174,7 +175,6 @@ export default function DeliveriesScreen() {
         contentContainerStyle={styles.listContent}
         showsVerticalScrollIndicator={false}
       />
-
     </SafeAreaView>
   );
 }
