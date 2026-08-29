@@ -5,7 +5,7 @@ import { CameraView, useCameraPermissions } from 'expo-camera';
 import deliveries from '../../../data/deliveries';
 
 export default function CameraScreen() {
-  const { id } = useLocalSearchParams();
+  const { id, contactName, contactPhone, contactImage } = useLocalSearchParams();
   const delivery = deliveries.find((d) => d.id === id);
 
   const [permission, requestPermission] = useCameraPermissions();
@@ -57,7 +57,10 @@ export default function CameraScreen() {
       pathname: `/delivery/${id}`,
       params: {
         photoUri: photoUri,
-        photoTimestamp: formatTime(new Date())
+        photoTimestamp: formatTime(new Date()),
+        contactName: contactName || '',
+        contactPhone: contactPhone || '',
+        contactImage: contactImage || ''
       }
     });
   };

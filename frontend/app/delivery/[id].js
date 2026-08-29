@@ -6,12 +6,13 @@ import DetailRow from '../../components/DetailRow';
 import DeliveryTimeline from '../../components/DeliveryTimeline';
 
 export default function DeliveryDetailsScreen() {
-  const { id, photoUri, photoTimestamp } = useLocalSearchParams();
+  const { id, photoUri, photoTimestamp, contactName, contactPhone, contactImage } = useLocalSearchParams();
   const delivery = deliveries.find((d) => d.id === id);
 
   const [status, setStatus] = useState(delivery ? delivery.status : '');
   const [timeline, setTimeline] = useState({});
   const [photo, setPhoto] = useState(null);
+  const [selectedContact, setSelectedContact] = useState(null);
 
   useEffect(() => {
     if (delivery) {
@@ -45,6 +46,16 @@ export default function DeliveryDetailsScreen() {
       });
     }
   }, [photoUri, photoTimestamp]);
+
+  useEffect(() => {
+    if (contactName) {
+      setSelectedContact({
+        name: contactName,
+        phone: contactPhone,
+        image: contactImage
+      });
+    }
+  }, [contactName, contactPhone, contactImage]);
 
   if (!delivery) {
     return (
@@ -160,6 +171,58 @@ export default function DeliveryDetailsScreen() {
           <DeliveryTimeline status={status} timeline={timeline} />
         </View>
 
+        <View style={styles.contactCardContainer}>
+          <Text style={styles.sectionTitle}>Customer Contact</Text>
+          {selectedContact ? (
+            <View>
+              <Text style={styles.contactSelectedText}>Selected from Contacts ✓</Text>
+              <View style={styles.contactInfoRow}>
+                {selectedContact.image ? (
+                  <Image source={{ uri: selectedContact.image }} style={styles.contactAvatar} />
+                ) : (
+                  <View style={styles.contactAvatarPlaceholder}>
+                     <Text style={styles.contactAvatarText}>
+                       {selectedContact.name.charAt(0).toUpperCase()}
+                     </Text>
+                  </View>
+                )}
+                <View style={styles.contactDetails}>
+                  <Text style={styles.contactName}>{selectedContact.name}</Text>
+                  <Text style={styles.contactPhone}>{selectedContact.phone}</Text>
+                </View>
+              </View>
+              <Pressable
+                style={({ pressed }) => [styles.captureBtn, pressed && styles.buttonPressed]}
+                onPress={() => router.push({
+                  pathname: `/delivery/contacts/${id}`,
+                  params: {
+                    photoUri: photo ? photo.uri : '',
+                    photoTimestamp: photo ? photo.timestamp : ''
+                  }
+                })}
+              >
+                <Text style={styles.captureBtnText}>CHANGE CONTACT</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <View>
+              <Text style={styles.noContactText}>No customer contact selected.</Text>
+              <Pressable
+                style={({ pressed }) => [styles.captureBtn, pressed && styles.buttonPressed]}
+                onPress={() => router.push({
+                  pathname: `/delivery/contacts/${id}`,
+                  params: {
+                    photoUri: photo ? photo.uri : '',
+                    photoTimestamp: photo ? photo.timestamp : ''
+                  }
+                })}
+              >
+                <Text style={styles.captureBtnText}>SELECT CUSTOMER CONTACT</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
+
         <View style={styles.photoCard}>
           <Text style={styles.sectionTitle}>Delivery Photo Proof</Text>
           {photo ? (
@@ -172,7 +235,14 @@ export default function DeliveryDetailsScreen() {
               </View>
               <Pressable
                 style={({ pressed }) => [styles.captureBtn, pressed && styles.buttonPressed]}
-                onPress={() => router.push(`/delivery/camera/${id}`)}
+                onPress={() => router.push({
+                  pathname: `/delivery/camera/${id}`,
+                  params: {
+                    contactName: selectedContact ? selectedContact.name : '',
+                    contactPhone: selectedContact ? selectedContact.phone : '',
+                    contactImage: selectedContact ? selectedContact.image : ''
+                  }
+                })}
               >
                 <Text style={styles.captureBtnText}>CAPTURE NEW PHOTO</Text>
               </Pressable>
@@ -182,7 +252,14 @@ export default function DeliveryDetailsScreen() {
               <Text style={styles.noPhotoText}>No delivery photo captured yet.</Text>
               <Pressable
                 style={({ pressed }) => [styles.captureBtn, pressed && styles.buttonPressed]}
-                onPress={() => router.push(`/delivery/camera/${id}`)}
+                onPress={() => router.push({
+                  pathname: `/delivery/camera/${id}`,
+                  params: {
+                    contactName: selectedContact ? selectedContact.name : '',
+                    contactPhone: selectedContact ? selectedContact.phone : '',
+                    contactImage: selectedContact ? selectedContact.image : ''
+                  }
+                })}
               >
                 <Text style={styles.captureBtnText}>CAPTURE DELIVERY PHOTO</Text>
               </Pressable>
@@ -327,6 +404,73 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#5D7B6F',
     marginBottom: 12,
+  },
+  contactCardContainer: {
+    backgroundColor: '#D7F9FA',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#B0D4B8',
+    elevation: 2,
+    shadowColor: '#5D7B6F',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    marginBottom: 16,
+  },
+  contactSelectedText: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#5D7B6F',
+    marginBottom: 12,
+  },
+  contactInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  contactAvatar: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#EAE7D6',
+    borderWidth: 1,
+    borderColor: '#B0D4B8',
+  },
+  contactAvatarPlaceholder: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    backgroundColor: '#EAE7D6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#B0D4B8',
+  },
+  contactAvatarText: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#5D7B6F',
+  },
+  contactDetails: {
+    marginLeft: 16,
+    flex: 1,
+  },
+  contactName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#5D7B6F',
+  },
+  contactPhone: {
+    fontSize: 14,
+    color: '#5D7B6F',
+    marginTop: 4,
+  },
+  noContactText: {
+    fontSize: 15,
+    color: '#5D7B6F',
+    textAlign: 'center',
+    marginVertical: 12,
   },
   photoCard: {
     backgroundColor: '#D7F9FA',
