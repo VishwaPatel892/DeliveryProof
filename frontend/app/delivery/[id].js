@@ -1,55 +1,51 @@
-// app/delivery/[id].js
-//
-// DYNAMIC ROUTE FOR DELIVERY DETAILS — Part 4
-//
-// WHAT IS A DYNAMIC ROUTE?
-// - In Expo Router, a filename with brackets like `[id].js` is a dynamic route.
-// - It matches any URL path like `/delivery/1`, `/delivery/2`, etc.
-// - The actual value in the URL (e.g. "1") is mapped to the parameter name `id`.
-//
-// HOW `useLocalSearchParams()` WORKS:
-// - It is a hook from Expo Router that extracts parameters from the current route path.
-// - If the URL path is `/delivery/3`, then `useLocalSearchParams()` returns `{ id: '3' }`.
-//
-// HOW `find()` WORKS:
-// - Standard JavaScript array method that searches through the `deliveries` array
-//   and returns the first object that satisfies our testing function (d.id === id).
-//
-// COLOR PALETTE (Green Theme):
-//   Screen Background  → #EAE7D6 (Warm off-white)
-//   Information Cards  → #A4C3A2 (Soft green)
-//   Headers & Buttons  → #5D7B6F (Deep teal-green)
-//   Status Highlights  → #B0D4B8 (Light green)
-//   Secondary Info Card→ #D7F9FA (Light cyan accent)
-
-import React from 'react';
-import { View, Text, StyleSheet, SafeAreaView, Pressable, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, Pressable, ScrollView, Alert, Image } from 'react-native';
 import { useLocalSearchParams, router, Link } from 'expo-router';
-
-// Import our dummy deliveries dataset
 import deliveries from '../../data/deliveries';
-
-// Import our reusable DetailRow child component
 import DetailRow from '../../components/DetailRow';
-
-// ── Status Color Helper ──────────────────────────────────────────────────────
-function getStatusColor(status) {
-  if (status === 'Delivered')   return '#6B9071';   // muted dark green
-  if (status === 'Failed')      return '#A36868';   // muted dusty red
-  if (status === 'On the Way')  return '#688CA3';   // muted slate blue
-  if (status === 'Arrived')     return '#8868A3';   // muted dusty purple
-  if (status === 'Picked Up')   return '#A38868';   // muted dusty amber
-  return '#5D7B6F';                                  // deep teal-green (Pending)
-}
+import DeliveryTimeline from '../../components/DeliveryTimeline';
 
 export default function DeliveryDetailsScreen() {
-  // 1. Get the dynamic delivery ID parameter from the URL path
-  const { id } = useLocalSearchParams();
-
-  // 2. Search for the corresponding delivery object
+  const { id, photoUri, photoTimestamp } = useLocalSearchParams();
   const delivery = deliveries.find((d) => d.id === id);
 
-  // ── Scenario A: Invalid/Missing Delivery ID (Conditional Rendering) ──────────
+  const [status, setStatus] = useState(delivery ? delivery.status : '');
+  const [timeline, setTimeline] = useState({});
+  const [photo, setPhoto] = useState(null);
+
+  useEffect(() => {
+    if (delivery) {
+      setStatus(delivery.status);
+      const initialTimeline = {};
+      const statuses = ["Assigned", "Picked Up", "On the Way", "Arrived", "Delivered"];
+      let currentTimelineStatus = delivery.status;
+      if (delivery.status === "Pending") {
+        currentTimelineStatus = "Assigned";
+      }
+      const currentIndex = statuses.indexOf(currentTimelineStatus);
+      const baseHour = 10;
+      for (let i = 0; i <= currentIndex && i < statuses.length; i++) {
+        const stage = statuses[i];
+        const mins = i * 15;
+        const hour = baseHour + Math.floor(mins / 60);
+        const displayMin = (mins % 60).toString().padStart(2, '0');
+        const displayHour = hour > 12 ? hour - 12 : hour;
+        const ampm = hour >= 12 ? "PM" : "AM";
+        initialTimeline[stage] = `${displayHour}:${displayMin} ${ampm}`;
+      }
+      setTimeline(initialTimeline);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    if (photoUri) {
+      setPhoto({
+        uri: photoUri,
+        timestamp: photoTimestamp
+      });
+    }
+  }, [photoUri, photoTimestamp]);
+
   if (!delivery) {
     return (
       <SafeAreaView style={styles.safeArea}>
@@ -59,7 +55,6 @@ export default function DeliveryDetailsScreen() {
           <Text style={styles.errorSubtitle}>
             The delivery you are looking for does not exist or has been removed.
           </Text>
-
           <Pressable
             style={({ pressed }) => [styles.primaryButton, pressed && styles.buttonPressed]}
             onPress={() => router.back()}
@@ -71,11 +66,69 @@ export default function DeliveryDetailsScreen() {
     );
   }
 
-  // ── Scenario B: Delivery Found (Normal rendering flow) ───────────────────────
+  const formatTime = (date) => {
+    let hours = date.getHours();
+    const minutes = date.getMinutes().toString().padStart(2, '0');
+    const ampm = hours >= 12 ? "PM" : "AM";
+    hours = hours % 12;
+    hours = hours ? hours : 12;
+    return `${hours}:${minutes} ${ampm}`;
+  };
+
+  const getNextStatus = (currentStatus) => {
+    if (currentStatus === "Pending") return "Picked Up";
+    if (currentStatus === "Picked Up") return "On the Way";
+    if (currentStatus === "On the Way") return "Arrived";
+    if (currentStatus === "Arrived") return "Delivered";
+    return null;
+  };
+
+  const getButtonText = (currentStatus) => {
+    if (currentStatus === "Pending") return "MARK AS PICKED UP";
+    if (currentStatus === "Picked Up") return "START DELIVERY";
+    if (currentStatus === "On the Way") return "MARK AS ARRIVED";
+    if (currentStatus === "Arrived") return "MARK AS DELIVERED";
+    return "";
+  };
+
+  const getStatusColor = (currentStatus) => {
+    if (currentStatus === "Delivered") return "#5D7B6F";
+    if (currentStatus === "Failed") return "#5D7B6F";
+    if (currentStatus === "On the Way") return "#B0D4B8";
+    if (currentStatus === "Arrived") return "#A4C3A2";
+    if (currentStatus === "Picked Up") return "#B0D4B8";
+    return "#5D7B6F";
+  };
+
+  const handleUpdateStatus = () => {
+    const nextStatus = getNextStatus(status);
+    if (!nextStatus) return;
+
+    Alert.alert(
+      "Are you sure?",
+      `Mark this delivery as ${nextStatus}?`,
+      [
+        {
+          text: "Cancel",
+          style: "cancel"
+        },
+        {
+          text: "Confirm",
+          onPress: () => {
+            setStatus(nextStatus);
+            const currentTime = formatTime(new Date());
+            setTimeline((prev) => ({
+              ...prev,
+              [nextStatus]: currentTime
+            }));
+          }
+        }
+      ]
+    );
+  };
+
   return (
     <SafeAreaView style={styles.safeArea}>
-      
-      {/* ── 1. Pressable Back Navigation Bar ── */}
       <View style={styles.header}>
         <Pressable
           style={({ pressed }) => [styles.backButton, pressed && styles.buttonPressed]}
@@ -86,13 +139,8 @@ export default function DeliveryDetailsScreen() {
       </View>
 
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
-
-        {/* ── 2. Primary Information Card (Soft Green) ── */}
         <View style={styles.card}>
-          {/* Order Title */}
           <Text style={styles.orderTitle}>📦 Order ID: {delivery.orderId}</Text>
-
-          {/* Reusable Detail Rows */}
           <DetailRow label="Customer" value={delivery.customerName} />
           <DetailRow label="Phone" value={delivery.phone} />
           <DetailRow label="Address" value={delivery.address} />
@@ -100,19 +148,70 @@ export default function DeliveryDetailsScreen() {
           <DetailRow label="Items" value={delivery.items} />
         </View>
 
-        {/* ── 3. Secondary Highlight Status Card (Light Cyan Accent) ── */}
         <View style={styles.statusCard}>
           <Text style={styles.statusLabel}>Current Status</Text>
-          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(delivery.status) }]}>
-            <Text style={styles.statusText}>{delivery.status}</Text>
+          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(status) }]}>
+            <Text style={styles.statusText}>{status}</Text>
           </View>
         </View>
 
-        {/* ── 4. Expo Router Link Demonstration ── */}
-        {/*
-          Tapping this link will return the user back to the deliveries tab screen.
-          We use the absolute tab route path: '/(tabs)/deliveries'.
-        */}
+        <View style={styles.timelineCard}>
+          <Text style={styles.sectionTitle}>Delivery Timeline</Text>
+          <DeliveryTimeline status={status} timeline={timeline} />
+        </View>
+
+        <View style={styles.photoCard}>
+          <Text style={styles.sectionTitle}>Delivery Photo Proof</Text>
+          {photo ? (
+            <View>
+              <Text style={styles.photoStatusText}>Delivery photo captured ✓</Text>
+              <Image source={{ uri: photo.uri }} style={styles.photoPreview} />
+              <View style={styles.photoInfoContainer}>
+                <DetailRow label="Delivery" value={delivery.orderId} />
+                <DetailRow label="Captured" value={photo.timestamp} />
+              </View>
+              <Pressable
+                style={({ pressed }) => [styles.captureBtn, pressed && styles.buttonPressed]}
+                onPress={() => router.push(`/delivery/camera/${id}`)}
+              >
+                <Text style={styles.captureBtnText}>CAPTURE NEW PHOTO</Text>
+              </Pressable>
+            </View>
+          ) : (
+            <View>
+              <Text style={styles.noPhotoText}>No delivery photo captured yet.</Text>
+              <Pressable
+                style={({ pressed }) => [styles.captureBtn, pressed && styles.buttonPressed]}
+                onPress={() => router.push(`/delivery/camera/${id}`)}
+              >
+                <Text style={styles.captureBtnText}>CAPTURE DELIVERY PHOTO</Text>
+              </Pressable>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.actionContainer}>
+          {status === "Delivered" ? (
+            <View style={styles.completedContainer}>
+              <Text style={styles.completedText}>✓ Delivery Completed</Text>
+              {timeline["Delivered"] ? (
+                <Text style={styles.completedTimestamp}>Completed at {timeline["Delivered"]}</Text>
+              ) : null}
+            </View>
+          ) : status === "Failed" ? (
+            <View style={styles.failedContainer}>
+              <Text style={styles.failedText}>Delivery Failed</Text>
+            </View>
+          ) : (
+            <Pressable
+              style={({ pressed }) => [styles.actionButton, pressed && styles.buttonPressed]}
+              onPress={handleUpdateStatus}
+            >
+              <Text style={styles.actionButtonText}>{getButtonText(status)}</Text>
+            </Pressable>
+          )}
+        </View>
+
         <View style={styles.linkContainer}>
           <Link href="/(tabs)/deliveries" asChild>
             <Pressable style={({ pressed }) => [styles.textLink, pressed && styles.buttonPressed]}>
@@ -121,29 +220,24 @@ export default function DeliveryDetailsScreen() {
           </Link>
         </View>
 
-        {/* ── 5. Navigation Button ── */}
         <Pressable
           style={({ pressed }) => [styles.primaryButton, pressed && styles.buttonPressed]}
           onPress={() => router.back()}
         >
           <Text style={styles.primaryButtonText}>BACK TO DELIVERIES</Text>
         </Pressable>
-
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  // Main container (Warm off-white)
   safeArea: {
     flex: 1,
     backgroundColor: '#EAE7D6',
   },
-
-  // Back header row
   header: {
-    backgroundColor: '#5D7B6F',         // Deep teal-green
+    backgroundColor: '#5D7B6F',
     paddingHorizontal: 16,
     paddingVertical: 14,
     borderBottomLeftRadius: 16,
@@ -155,21 +249,18 @@ const styles = StyleSheet.create({
   backButtonText: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#EAE7D6',                   // Warm off-white
+    color: '#EAE7D6',
   },
-
   scrollContent: {
     padding: 16,
     paddingBottom: 40,
   },
-
-  // Main Info Card (Soft Green)
   card: {
     backgroundColor: '#A4C3A2',
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
-    borderColor: '#B0D4B8',             // Light Green border
+    borderColor: '#B0D4B8',
     elevation: 3,
     shadowColor: '#5D7B6F',
     shadowOpacity: 0.15,
@@ -186,10 +277,8 @@ const styles = StyleSheet.create({
     borderBottomColor: '#5D7B6F',
     paddingBottom: 8,
   },
-
-  // Status Badge Card (Light Cyan Accent)
   statusCard: {
-    backgroundColor: '#D7F9FA',         // Light cyan info area
+    backgroundColor: '#D7F9FA',
     borderRadius: 16,
     padding: 20,
     borderWidth: 1,
@@ -199,7 +288,7 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowOffset: { width: 0, height: 2 },
     shadowRadius: 6,
-    marginBottom: 24,
+    marginBottom: 16,
   },
   statusLabel: {
     fontSize: 13,
@@ -220,8 +309,124 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     fontSize: 14,
   },
-
-  // Link layout
+  timelineCard: {
+    backgroundColor: '#D7F9FA',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#B0D4B8',
+    elevation: 2,
+    shadowColor: '#5D7B6F',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#5D7B6F',
+    marginBottom: 12,
+  },
+  photoCard: {
+    backgroundColor: '#D7F9FA',
+    borderRadius: 16,
+    padding: 20,
+    borderWidth: 1,
+    borderColor: '#B0D4B8',
+    elevation: 2,
+    shadowColor: '#5D7B6F',
+    shadowOpacity: 0.1,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 6,
+    marginBottom: 16,
+  },
+  photoStatusText: {
+    fontSize: 15,
+    fontWeight: 'bold',
+    color: '#5D7B6F',
+    marginBottom: 12,
+  },
+  photoPreview: {
+    width: '100%',
+    height: 200,
+    borderRadius: 12,
+    marginBottom: 12,
+    backgroundColor: '#000000',
+  },
+  photoInfoContainer: {
+    marginBottom: 12,
+  },
+  noPhotoText: {
+    fontSize: 15,
+    color: '#5D7B6F',
+    textAlign: 'center',
+    marginVertical: 12,
+  },
+  captureBtn: {
+    backgroundColor: '#5D7B6F',
+    paddingVertical: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  captureBtnText: {
+    color: '#EAE7D6',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  actionContainer: {
+    marginBottom: 16,
+  },
+  actionButton: {
+    backgroundColor: '#5D7B6F',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+    elevation: 2,
+    shadowColor: '#5D7B6F',
+    shadowOpacity: 0.2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowRadius: 4,
+  },
+  actionButtonText: {
+    color: '#EAE7D6',
+    fontWeight: 'bold',
+    fontSize: 15,
+    letterSpacing: 0.5,
+  },
+  completedContainer: {
+    backgroundColor: '#A4C3A2',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#B0D4B8',
+  },
+  completedText: {
+    color: '#5D7B6F',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  completedTimestamp: {
+    color: '#5D7B6F',
+    fontSize: 13,
+    marginTop: 4,
+  },
+  failedContainer: {
+    backgroundColor: '#EAE7D6',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#A4C3A2',
+  },
+  failedText: {
+    color: '#5D7B6F',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
   linkContainer: {
     alignItems: 'center',
     marginBottom: 20,
@@ -236,8 +441,6 @@ const styles = StyleSheet.create({
     color: '#5D7B6F',
     textDecorationLine: 'underline',
   },
-
-  // Primary Action Button (Deep Teal)
   primaryButton: {
     backgroundColor: '#5D7B6F',
     paddingVertical: 14,
@@ -258,8 +461,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     letterSpacing: 0.5,
   },
-
-  // Error views
   errorContainer: {
     flex: 1,
     justifyContent: 'center',
